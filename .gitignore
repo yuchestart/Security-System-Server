@@ -1,3 +1,4 @@
-experimental/*
+experimental
 *.ipnyb
 __pycache__
+train
