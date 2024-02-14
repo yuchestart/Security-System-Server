@@ -18,20 +18,32 @@ class FaceRecognition():
     }
     camera:cv2.VideoCapture = None
     camera_ID:int = None
-    def __init__(self,camera):
-        self.camera = cv2.VideoCapture(camera)
+    def __init__(self):
+        pass
+        #self.camera = cv2.VideoCapture(camera)
     def detect_faces(self,image_bgr,scale=0.25):
+
         image_rgb = cv2.cvtColor(image_bgr,cv2.COLOR_BGR2RGB)
         small = cv2.resize(image_rgb,fx=scale,fy=scale)
-        face_encoding = face_recognition.face_encodings(small)
-        face_location = face_recognition.face_locations(small)
-        return {
-            "encodings":face_encoding,
-            "locations":face_location,
-        }
+
+        face_encodings = face_recognition.face_encodings(small)
+        face_locations = face_recognition.face_locations(small)
+
+        #There should be the same number of face encodings and locations
+        faces = []
+        for i in range(len(face_encodings)):
+            faces.append(
+                Face(
+                    face_encodings[i],
+                    face_locations[i]
+                )
+            )
+
+        return faces
     
-    def label_faces(self,encodings):
+    def label_faces(self,encodings: List[Face]):
         labels: List[Tuple[str,Face]] = []
+        encodings = []
         for encoding in encodings:
             #First check hostile
             face_categories = ["hostile","neutral","friendly"]
@@ -51,7 +63,8 @@ class FaceRecognition():
             
                     
     def switch_camera(self,camera):
-        self.camera.release()
+        if self.camera != None:
+            self.camera.release()
         self.camera = cv2.VideoCapture(camera)
 
     def destroy(self):
