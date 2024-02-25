@@ -53,6 +53,8 @@ class FaceRecognition():
             face_distances:Dict[str,List[float]] = {"hostile":None,"neutral":None,"friendly":None}
             face_matches:Dict[str,str] = {"hostile":"Stranger","neutral":"Stranger","friendly":"Stranger"}
             for category in face_categories:
+                if not len(self.known_faces[category]):
+                    continue
                 face_distances[category] = face_recognition.face_distance(
                     list(map(lambda x: x.encoding,self.known_faces[category])),
                     encoding

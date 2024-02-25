@@ -19,9 +19,10 @@ def switchScreens(name):
     if name != "__BLANK__":
         screens[name].pack()
 
-def beginLoop():
-    window.mainloop()
+def beginLoop() -> NoReturn:
     switchScreens("loading")
+    window.mainloop()
+    
 
 def addScreen():
     pass
