@@ -1,28 +1,43 @@
+import xml.etree.ElementTree as ET
 import tkinter as tk
 from typing import *
 
-destroyfunction = ()
-window: tk.Tk = tk.Tk()
-window.title("Security System")
-window.configure(background="#ffffff")
-current_screen = "__BLANK__"
-screens = {}
+def process_parameters(p:Dict[str,str]):
+    parameters = p
+    for i in parameters:
+        if parameters[i].startswith("TK::"):
+            parameters[i] = getattr(tk,parameters[i][4:])
+        elif parameters[i].startswith("D:"):
+            dtype = parameters[i].split(":")
+            parameters[i] = eval(f"{dtype[1]}({dtype[2]})")
+        elif parameters[i].startswith("C:"):
+            parameters[i] = eval(f"{parameters[i][2:]}")
+    return parameters
 
-screens["loading"] = tk.Frame(window)
+def load_tkinter(element, parent: tk.Widget):
+    display_mode = ""
+    display_parameters = {}
+    widget_constructor = getattr(tk,element.tag)
+    widget_parameters = process_parameters(element.attrib)
+    widget:tk.Widget = widget_constructor(parent,**widget_parameters)
+
+    for child in element:
+        if child.tag == "pack" or child.tag == "grid":
+            display_mode = child.tag
+            display_parameters = child.attrib
+        else:
+            load_tkinter(child,widget)
+    display_parameters = process_parameters(display_parameters)
+    if display_mode == "pack":
+        widget.pack(**display_parameters)
+    elif display_mode == "grid":
+        if "sticky" not in display_parameters:
+            display_parameters["sticky"] = "w" 
+        widget.grid(**display_parameters)
+    return widget
 
 
-def switchScreens(name):
-    if name == current_screen:
-        return
-    if current_screen != "__BLANK__":
-        screens[current_screen].pack_forget()
-    if name != "__BLANK__":
-        screens[name].pack()
-
-def beginLoop() -> NoReturn:
-    switchScreens("loading")
-    window.mainloop()
-    
-
-def addScreen():
-    pass
+def load_xml(path: str,parent: tk.Widget) -> tk.Widget:
+    tree = ET.parse(path)
+    root = tree.getroot()
+    return load_tkinter(root, parent)
