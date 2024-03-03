@@ -2,8 +2,9 @@
 from communications import Server,recvlen
 from facerec import FaceRecognition,Face
 from uilogic import GUI
+from ui import getWidgetByName,image_cv2tk
 from typing import *
-from PIL import Image,ImageTk
+import tkinter as tk
 import atexit
 import socket
 import numpy as np
@@ -22,8 +23,7 @@ app = GUI(["mainpage","stream","personslist","settings"],names={
 detectThisFrame: bool = False
 working: bool = False
 facesDetected:List[Face] = []
-
-
+last_frame: tk.PhotoImage = None
 
 
 @atexit.register
@@ -32,11 +32,16 @@ def cleanup():
     server.destroy()
     recognition.destroy()
     print("Program terminated.")
+
 #endregion
 
 def client_mainloop(sock: socket.socket,addr: str,server: Server):
-    global detectThisFrame,facesDetected
+    global detectThisFrame,facesDetected,app,last_frame
 
+    if app.closed:
+        server.stop_client_mainloop()
+        return
+    #region
     #Allow client to continue.
     sock.sendall(b"CONTINUE")
     
@@ -61,7 +66,7 @@ def client_mainloop(sock: socket.socket,addr: str,server: Server):
     if detectThisFrame:
         faces = recognition.detect_faces(image)
         labels,hostility = recognition.label_faces(faces,threshold=0.4)
-        print(labels)
+        #print(labels)
         for i in range(len(faces)):
             newface = faces[i]
             newface.name = labels[i]
@@ -70,7 +75,7 @@ def client_mainloop(sock: socket.socket,addr: str,server: Server):
 
         #print("I worked!",locations)
         
-    for i,face in enumerate(facesDetected): #Top left bottom right
+        for i,face in enumerate(facesDetected): #Top left bottom right
             location = face.location
             image = cv2.rectangle(
                 image,
@@ -81,11 +86,16 @@ def client_mainloop(sock: socket.socket,addr: str,server: Server):
             )
             image = cv2.putText(image,face.name,(location[3],location[2]),cv2.FONT_HERSHEY_COMPLEX,0.5,(0,0,255))
 
-    key_pressed:int = cv2.waitKey(10)
+        streamlabel = getWidgetByName("stream.livestream",app.root)
+        last_frame = image_cv2tk(image)
+        streamlabel.configure(image=last_frame)
+        app.root.update()
+    #endregion
 
-
-
+    
     detectThisFrame = not detectThisFrame
+
+
 
 print("Begin Program")
 
@@ -114,5 +124,10 @@ if (not response) or (response != b"HANDSHAKE_ACCEPTED"):
 print("Handshake accepted; Beginning mainloop")
 
 server.add_client_mainloop(client_mainloop)
-server.begin_client_mainloop()
-GUI.begin()
+
+pi = tk.PhotoImage(file='../assets/nosignal.gif')
+e = getWidgetByName("stream.livestream",app.root)
+e.configure(image = pi)
+recognition_mainloop:  threading.Thread = threading.Thread(target=server.begin_client_mainloop)
+recognition_mainloop.start()
+app.begin()

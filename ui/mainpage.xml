@@ -16,17 +16,14 @@
     </Label>
     <Frame name="recentlydetectedpersons">
         <grid row="3" column="0"></grid>
-        <Frame>
-            <grid row="0" column="0"></grid>
-            <Label text="00:00:00 01/01/0000" name="persondate"><pack side="TK::LEFT"></pack></Label>
-            <Label text="Stranger" name="personname"><pack side="TK::LEFT"></pack></Label>
-            <Button text="Add Identity" name="identity" command="C:lambda:print('idk')"><pack side="TK::LEFT"></pack></Button>
-        </Frame>
-        <Frame>
-            <grid row="1" column="0"></grid>
-            <Label text="00:00:00 01/01/0000" name="persondate"><pack side="TK::LEFT"></pack></Label>
-            <Label text="Dangerous Person" name="personname" foreground="#ff0000" font="C:('Segoe UI',10,'bold')"><pack side="TK::LEFT"></pack></Label>
-            <Button text="Edit Identity" name="identity" command="C:lambda:print('idk')"><pack side="TK::LEFT"></pack></Button>
-        </Frame>
+        <!--
+            This is an example here:
+            <Frame>
+                <grid row="0" column="0"></grid>
+                <Label text="00:00:00 01/01/0000" name="persondate"><pack side="TK::LEFT"></pack></Label>
+                <Label text="Stranger" name="personname"><pack side="TK::LEFT"></pack></Label>
+                <Button text="Add Identity" name="identity"><pack side="TK::LEFT"></pack></Button>
+            </Frame>
+        -->
     </Frame>
 </Frame>

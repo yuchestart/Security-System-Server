@@ -7,6 +7,7 @@ class GUI:
     navbar: tk.Frame = None
     screens: Dict[str,tk.Frame] = {}
     current_screen: str = None
+    closed:bool = False
     def __init__(self,screens:List[str],path:str = "../ui/",title:str="Python GUI",names:Dict[str,str] = {}):
         self.root = tk.Tk()
         self.root.title(title)
@@ -28,28 +29,34 @@ class GUI:
         self.screens[screen].grid(column=0,row=1,sticky="w")
         self.current_screen = screen
 
-    def update_connection_status():
+    def update_connection_status(self):
         pass
 
-    def update_stream(self,screen):
+    def update_stream(self,stream):
         pass
+
+    def update_gui(self):
+        pass
+
+    def on_close(self):
+        self.closed = True
 
     def begin(self):
         self.switch_screens("mainpage")
         
         self.root.geometry("900x700")
+        self.root.protocol("WM_DELETE_WINDOW",self.on_close)
         self.root.mainloop()
 
-    def on_close(self):
-        pass
-
 if __name__ == "__main__":
-    gui = GUI(["mainpage","stream","personslist"],title="Security System",names={
+    from ui import getWidgetByName
+    gui = GUI(["mainpage","stream","personslist","settings"],title="Security System",names={
         "mainpage":"Home",
         "personslist":"Persons List",
-        "stream":"Livestream"
+        "stream":"Livestream",
+        "settings":"Settings"
     })
     
-
+    
 
     gui.begin()
