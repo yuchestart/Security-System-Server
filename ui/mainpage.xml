@@ -1,13 +1,13 @@
-<Frame name="mainmenu">
-    <Label text="Security System" font="C:('Segoe UI',20)">
+<Frame name="mainpage">
+    <Label text="Home" font="C:('Segoe UI',20)">
         <grid row = "0" column="0"></grid>
     </Label>
-    <Frame name="doorbellstatuscontainer">
+    <Frame name="connectionstatuscontainer">
         <grid row="1" column="0"></grid>
         <Label text="Doorbell: " >
             <grid row = "0" column="0"></grid>
         </Label>
-        <Label text="Not Connected" name="doorbellstatus" foreground="green">
+        <Label text="Not Connected" name="connectionstatus" foreground="red">
             <grid row="0" column="1"></grid>
         </Label>
     </Frame>

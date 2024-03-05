@@ -1,3 +1,6 @@
 <Frame name="settings">
-    <Label text="Settings will come soon"><pack></pack></Label>
+    <Label text="Settings" font="C:('Segoe UI',20)">
+        <grid row = "0" column="0"></grid>
+    </Label>
+    <Button text="Quit" command="C:quit"><grid row="1" column="0"></grid></Button>
 </Frame>

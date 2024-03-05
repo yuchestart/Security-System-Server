@@ -1,8 +1,10 @@
 import xml.etree.ElementTree as ET
 import tkinter as tk
+from tkinter import ttk
 import cv2
 from typing import *
 from PIL import Image,ImageTk
+from tkinter.simpledialog import Dialog
 
 def process_parameters(p:Dict[str,str]) -> Dict[str,Any]:
     parameters = p
@@ -20,6 +22,7 @@ def load_tkinter(element: ET.Element, parent: tk.Widget) -> tk.Widget:
     display_mode = ""
     display_parameters = {}
     widget_constructor = getattr(tk,element.tag)
+    
     widget_parameters = process_parameters(element.attrib)
     widget:tk.Widget = widget_constructor(parent,**widget_parameters)
 
@@ -43,9 +46,14 @@ def load_xml(path: str,parent: tk.Widget) -> tk.Widget:
     root = tree.getroot()
     return load_tkinter(root, parent)
 
-def image_cv2tk(bgr: Iterable) -> ImageTk:
+def image_cv2tk(bgr: Iterable) -> ImageTk.PhotoImage:
     image_rgb = cv2.cvtColor(bgr,cv2.COLOR_BGR2RGB)
     image_pil = Image.fromarray(image_rgb)
+    image_tk = ImageTk.PhotoImage(image=image_pil)
+    return image_tk
+
+def image_file2tk(path: str) -> ImageTk.PhotoImage:
+    image_pil = Image.open(path)
     image_tk = ImageTk.PhotoImage(image=image_pil)
     return image_tk
 

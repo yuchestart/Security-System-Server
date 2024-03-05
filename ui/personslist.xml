@@ -2,16 +2,20 @@
     <Label text="Persons List" font="C:('Segoe UI',20)">
         <grid row = "0" column="0"></grid>
     </Label>
-    <Label text="Hostile" font="C:('Segoe UI',15)" foreground="#ff0000">
-        <grid row = "1" column="0"></grid>
-    </Label>
-    <Frame name="hostilepersons">
+    <Button text="Add person to library" name="addperson"><grid row="1" column="0"></grid></Button>
+    <Frame name="library">
         <grid row="2" column="0"></grid>
-    </Frame>
-    <Label text="Non-hostile" font="C:('Segoe UI',15)">
-        <grid row = "3" column="0"></grid>
-    </Label>
-    <Frame name="nonhostilepersons">
-        <grid row = "4" column="0"></grid>
+        <Label text="Hostile" font="C:('Segoe UI',15)" foreground="#ff0000">
+            <grid row = "0" column="0"></grid>
+        </Label>
+        <Frame name="hostilepersons">
+            <grid row="1" column="0"></grid>
+        </Frame>
+        <Label text="Non-hostile" font="C:('Segoe UI',15)">
+            <grid row = "2" column="0"></grid>
+        </Label>
+        <Frame name="nonhostilepersons">
+            <grid row = "3" column="0"></grid>
+        </Frame>
     </Frame>
 </Frame>

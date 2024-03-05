@@ -25,6 +25,8 @@ class Face():
             self.encodings.append(encoding)
         elif type(encoding) == list and type(encoding[0]) == np.array:
             self.encodings.extend(encoding)
+    def __eq__(self, __value: object) -> bool:
+        return self.__dict__ == __value.__dict__ and isinstance(__value,Face)
 class FaceRecognition():
     known_faces: Dict[str, List[Face]] = {
         "hostile":[],
@@ -60,8 +62,21 @@ class FaceRecognition():
         pickle.dump(self.known_faces,file)
         file.close()
 
-    def remove_face(self,id,category:str,by_name:bool = True):
-        pass
+    def remove_face(self,id,category:str,by_name:bool = False,by_encoding:bool = False,by_index:bool = True):
+        if by_name:
+            newknown:List[Face] = []
+            for i,face in enumerate(self.known_faces[category]):
+                if face.name != id:
+                    newknown.append(face)
+            self.known_faces[category] = newknown
+        elif by_encoding:
+            newknown:List[Face] = []
+            for i,face in enumerate(self.known_faces[category]):
+                if face.encoding != id:
+                    newknown.append(face)
+            self.known_faces[category] = newknown
+        elif by_index:
+            del self.known_faces[category][id]
 
     def load_faces(self):
         file = open("../saves/faces.faces","rb")
