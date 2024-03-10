@@ -8,14 +8,15 @@ class Face():
     encodings:List[np.array] = None
     location:tuple = None
     known:bool = False
-    def __init__(self,encoding:np.array | List[np.array],location=None,known = False,name='Stranger'):
+    def __init__(self,encoding:np.array | List[np.array],location=None,known = False,name='Stranger',tolerance = 0.4):
         if type(encoding) == list:
-            self.encoding = encoding
+            self.encodings = encoding
         else:
-            self.encoding = [encoding]
+            self.encodings = [encoding]
         self.location = location
         self.known = known
         self.name = name
+        self.tolerance = tolerance
 
     def get_distance(self,encoding: np.array):
         return min(face_recognition.face_distance(self.encodings,encoding))
@@ -25,8 +26,16 @@ class Face():
             self.encodings.append(encoding)
         elif type(encoding) == list and type(encoding[0]) == np.array:
             self.encodings.extend(encoding)
-    def __eq__(self, __value: object) -> bool:
-        return self.__dict__ == __value.__dict__ and isinstance(__value,Face)
+    def __eq__(self, value: object) -> bool:
+        if not isinstance(value,Face):
+            return False
+        try:
+            for myencoding in self.encodings:
+                if any(face_recognition.face_distance([value.encodings],myencoding) > self.tolerance):
+                    return False
+            return True
+        except:
+            return False
 class FaceRecognition():
     known_faces: Dict[str, List[Face]] = {
         "hostile":[],
@@ -72,19 +81,30 @@ class FaceRecognition():
         elif by_encoding:
             newknown:List[Face] = []
             for i,face in enumerate(self.known_faces[category]):
-                if face.encoding != id:
+                if face.encodings != id:
                     newknown.append(face)
             self.known_faces[category] = newknown
         elif by_index:
             del self.known_faces[category][id]
 
     def load_faces(self):
-        file = open("../saves/faces.faces","rb")
-        self.known_faces = pickle.load(file)
-        file.close()
+        try:
+            file = open("../saves/faces.faces","rb")
+            self.known_faces = pickle.load(file)
+            file.close()
+        except FileNotFoundError:
+            print("Save file doesn't exist. Try saving something first!")
+        except EOFError:
+            print("Save file was corrupted. Try saving something!")
 
     def add_face(self,face:Face,category:str):
         self.known_faces[category].append(face)
+
+    def clear_faces(self):
+        self.known_faces = {
+        "hostile":[],
+        "nonhostile":[],
+    }
 
     def reinforce_face(self,face:Face,id:int,category:str):
         pass
@@ -101,7 +121,7 @@ class FaceRecognition():
         hostile: List[bool] = []
         encodings = []
         for face in faces:
-            encodings.append(face.encoding)
+            encodings.extend(face.encodings)
         face_categories = ["hostile","nonhostile"]
         for encoding in encodings:
             #First check hostile
@@ -111,12 +131,11 @@ class FaceRecognition():
             for category in face_categories:
                 if not len(self.known_faces[category]):
                     continue
-                distances = face_recognition.face_distance(
-                    list(map(lambda x: x.encoding,self.known_faces[category])),
-                    encoding
-                )
-                min_distance = np.argmin(distances)
-                print(face_distances,category,min_distance,threshold)
+                distances = []
+                for face in self.known_faces[category]:
+                    d = face_recognition.face_distance(face.encodings,encoding)
+                    distances.append(min(d))
+                min_distance = np.argmin(np.array(distances))
                 if distances[min_distance] < threshold:
                     face_matches[category] = self.known_faces[category][min_distance].name
                     face_distances[category] = distances[min_distance]
@@ -129,7 +148,7 @@ class FaceRecognition():
                     add_label("nonhostile")
                 else:
                     add_label("hostile")
-            elif face_distances["nonhostile"] < face_distances("hostile"):
+            elif face_distances["nonhostile"] < face_distances["hostile"]:
                 add_label("nonhostile")
             else:
                 add_label("hostile")

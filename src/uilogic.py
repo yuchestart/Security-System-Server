@@ -86,6 +86,16 @@ def notify_user_clear():
     notification.title = "Notice"
     notification.icon = "../assets/icon.png"
     notification.message = "Hostile persons have not been detected for 10 minutes. Still proceed with caution, however as they may still be present."
+    notification.send()
+
+#def notify_user_stranger(n):
+#    notification = Notify()
+#    notification.urgency = "critical"
+#    notification.application_name = "Security System"
+#    notification.title = "Caution: Stranger Detected"
+#    notification.icon = "../assets/caution.png"
+#    notification.message = f"{n if n>1 else "A"} stranger{"s" if n>1 else ""} have been detected. Check it out!"
+#    notification.send()
 
 if __name__ == "__main__":
     from ui import getWidgetByName
