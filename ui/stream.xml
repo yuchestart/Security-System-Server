@@ -5,8 +5,8 @@
         <grid row="2" column="0"></grid>
         <!--Controls-->
         <Button text="Identify Face" name="identifyface"><pack side="left"></pack></Button>
-        <Checkbutton text="Face Recognition"><pack side="left" padx="10"></pack></Checkbutton>
-        <Checkbutton text="Face Labeling" state="disabled"><pack side="left" padx="10"></pack></Checkbutton>
+        <Checkbutton text="Face Detection" name="detectface"><pack side="left" padx="10"></pack></Checkbutton>
+        <Checkbutton text="Face Labeling" name="labelface"><pack side="left" padx="10"></pack></Checkbutton>
         <Label text="Placeholder" name="action"></Label>
     </Frame>
     <Frame name="status">

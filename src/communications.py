@@ -1,5 +1,7 @@
 import socket
 import json
+import cv2
+import numpy as np
 from typing import *
 def recvlen(sock:socket.socket,n: int):
     data = b""
@@ -10,6 +12,33 @@ def recvlen(sock:socket.socket,n: int):
             return False
         data += bytesrecieved
     return data
+
+def msghead(message:bytes,prefix:bytes = b"HEAD"):
+    return prefix + len(message).to_bytes(10,"big") + message
+
+def recieve_livestream_frame(sock: socket.socket,addr: str) -> Tuple[Iterable,bool]:
+    """Upon the failure of this function, here are the error codes:
+    * 0: Prefix not recieved
+    * 1: Invalid packet prefix
+    * 2: Didn't recieve data
+    """
+    prefix:bytes = sock.recv(4)
+    if not prefix:
+        print("Prefix not recieved")
+        return (0,False)
+    elif prefix != b"LVST":
+        print(f"Invalid packet prefix: {prefix}")
+        return (1,False)
+    length:bytes = int.to_bytes(sock.recv(10))
+    data: bytes = recvlen(sock,length)
+    if not data:
+        print("Didn't recieve data")
+        return (2,False)
+    data = np.frombuffer(data,dtype=np.uint8)
+    image = cv2.imdecode(data,cv2.IMREAD_COLOR)
+    return image
+
+
 
 class Server:
 
@@ -59,6 +88,13 @@ class Server:
         except:
             return False
 
+    def send_handshake(self) -> bool:
+        self.client_socket.sendall(b"HNDS")
+        response: bytes = self.client_socket.recv(4)
+        if (not response) or (response != b"HSAC"):
+            print("No response" if not response else f"Invalid handshake: {str(response)}")
+            return False
+        return True
     def __del__(self):
         self.destroy()
 

@@ -1,0 +1,10 @@
+<Configuration>
+    <Variable name="face_detection_enabled" value="True">
+        <Name>stream.controls.detectface</Name>
+        <Name>settings.detectface</Name>
+    </Variable>
+    <Variable name="face_labeling_enabled" value="True">
+        <Name>stream.controls.labelface</Name>
+        <Name>settings.labelface</Name>
+    </Variable>
+</Configuration>

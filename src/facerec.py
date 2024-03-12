@@ -108,7 +108,7 @@ class FaceRecognition():
 
     def reinforce_face(self,face:Face,id:int,category:str):
         pass
-    
+
     def label_faces(self,faces: List[Face],threshold = 0.6) -> Tuple[List[str],List[bool]]:
         def add_label(category):
             if category == "Stranger":

@@ -125,25 +125,7 @@ def client_mainloop(sock: socket.socket,addr: str,server: Server):
 #Setup UI
 #region
 
-class CategorizeFace(Dialog):
-    def body(self,master):
-        self.category_value = tk.StringVar()
-        self.name_value = tk.StringVar()
-        self.name_value.set("Stranger")
-        self.label = tk.Label(master,text="Identify Face",font=("Segoe UI",15))
-        self.cat_description = tk.Label(master,text="Category:",font=("Segoe UI",15))
-        self.name_description = tk.Label(master,text="Name:",font=("Segoe UI",15))
-        self.category = ttk.Combobox(master,textvariable=self.category_value)
-        self.name = tk.Entry(master,textvariable=self.name_value)
-        self.category["values"] = ("Non-hostile","Hostile")
-        self.label.grid(row=0,column=0,sticky="w")
-        self.category.grid(row=1,column=1,sticky="w")
-        self.name.grid(row=2,column=1,sticky="w")
-        self.cat_description.grid(row=1,column=0,sticky="w")
-        self.name_description.grid(row=2,column=0,sticky="w")
 
-    def apply(self):
-        pass
 
 def setupui():
     global app

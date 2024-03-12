@@ -25,7 +25,6 @@ def load_tkinter(element: ET.Element, parent: tk.Widget) -> tk.Widget:
     
     widget_parameters = process_parameters(element.attrib)
     widget:tk.Widget = widget_constructor(parent,**widget_parameters)
-
     for child in element:
         if child.tag == "pack" or child.tag == "grid":
             display_mode = child.tag
