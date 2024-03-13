@@ -42,17 +42,19 @@ def client_mainloop(sock:socket.socket,addr:str,server:Server):
 
     if not running:
         server.stop_client_mainloop()
+        return
 
     #Allow client to continue
     sock.sendall(b"CTLS")
 
-    frame,ret = recieve_livestream_frame()
+    frame,ret = recieve_livestream_frame(sock,addr)
+    
     if not ret:
         print("Error code: ",frame)
         if frame == 1:
             print("Idk man")
         server.stop_client_mainloop()
-    display_image = cv2.resize(frame,(0,0),fx=4,fy=4)
+        return
 
     if detect_this_frame:
         faces_detected = recognition.detect_faces(frame)
@@ -68,14 +70,14 @@ def client_mainloop(sock:socket.socket,addr:str,server:Server):
             newface.name = labels[i]
             faces_detected[i] = newface
     
-    app.update_stream(display_image,faces_detected)
-
-
+    app.update_stream(frame,faces_detected)
 
 print("Begin Program")
 
 server = Server()
 recognition = FaceRecognition()
+
+recognition.load_faces()
 
 print(server.server_address,server.server_port)
 
@@ -96,5 +98,11 @@ server.add_client_mainloop(client_mainloop)
 server_mainloop = threading.Thread(target=server.begin_client_mainloop)
 server_mainloop.start()
 
-while True:
-    app.begin()
+app = GUI(["mainpage","stream","personslist","settings"],title="Security System",names={
+    "mainpage":"Home",
+    "personslist":"Persons List",
+    "stream":"Livestream",
+    "settings":"Settings"
+},icon="../assets/icon.png")
+
+app.begin()
