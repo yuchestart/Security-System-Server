@@ -1,13 +1,19 @@
-from ui import load_xml,image_cv2tk
-from notifypy import Notify
-from typing import *
+from ui import load_xml,image_cv2tk,getWidgetByName
+from facerec import Face,FaceRecognition
 import tkinter as tk
 import tkinter.ttk as ttk
-from tkinter.simpledialog import Dialog
 import xml.etree.ElementTree as ET
 import cv2
+from tkinter.simpledialog import Dialog
+from notifypy import Notify
+from typing import *
+from PIL import Image
+
 
 class CategorizeFace(Dialog):
+    def __init__(self,master,title,image):
+        super(Dialog,self).__init__(master,title)
+        self.image = image
     def body(self,master):
         self.category_value = tk.StringVar()
         self.name_value = tk.StringVar()
@@ -39,11 +45,19 @@ class GUI:
     navbar: tk.Frame = None
     screens: Dict[str,tk.Frame] = {}
     current_screen: str = None
+    recognition: FaceRecognition = None
     closed:bool = False
     configuration: Dict[str,Any] = {
         "face_detection_enabled":tk.BooleanVar,
         "face_labeling_enabled":tk.BooleanVar,
-        
+    }
+    variables: Dict[str,Any] = {
+        "livestream_identifying_faces":False,
+        "identified_faces":[]
+    }
+    livestream_last_frame: Dict[str,Any] = {
+        "photoimage":None,
+        "matrix":None
     }
     icon:tk.PhotoImage = None
 
@@ -64,7 +78,10 @@ class GUI:
         self.navbar.grid(column=0,row=0,sticky="nw")
         for label in self.configuration:
             self.configuration[label] = self.configuration[label]()
+        self.recognition = FaceRecognition()
+        self.recognition.load_faces()
         self.init_commands(path+"variableconfiguration.xml")
+    
     def switch_screens(self,screen):
         if self.current_screen == screen:
             return
@@ -72,6 +89,7 @@ class GUI:
             self.screens[self.current_screen].grid_forget()
         self.screens[screen].grid(column=0,row=1,sticky="w")
         self.current_screen = screen
+    
     def update_connection_status(self,status:bool):
         connectionstatuses:List[tk.Label] = [
             self.root.nametowidget("mainmenu.connectionstatuscontainer.connectionstatus"),
@@ -84,9 +102,10 @@ class GUI:
         if self.current_screen != "stream":
             return
         streamcanvas:tk.Canvas = getWidgetByName("stream.livestream",self.root)
-        last_frame = image_cv2tk(cv2.resize(image,(0,0),fx=3,fy=3))
-        streamcanvas.delete("all")
-        streamcanvas.create_image((0,0),anchor="nw",image=last_frame)
+        self.livestream_last_frame["photoimage"] = image_cv2tk(cv2.resize(image,(0,0),fx=3,fy=3))
+        self.livestream_last_frame["matrix"] = cv2.resize(image,(0,0),fx=3,fy=3)
+        streamcanvas.create_image((0,0),anchor="nw",image=self.livestream_last_frame["photoimage"])
+        
         for face in facesDetected:
             location = face.location
             streamcanvas.create_rectangle(
@@ -95,7 +114,11 @@ class GUI:
                 location[3]*3,
                 location[2]*3,outline="#ff0000")
             streamcanvas.create_text(location[1]*3,location[0]*3,text=face.name,fill="red",font=("Segoe UI",15))
-        streamcanvas.update()
+        self.root.update()
+        self.livestream_current_buffer += 1
+        if self.livestream_current_buffer == len(self.livestream_last_frame):
+            streamcanvas.delete("all")
+            self.livestream_current_buffer = 0
     
     def configure(self,variable,value):
         self.configuration[variable] = value
@@ -115,15 +138,34 @@ class GUI:
         self.root.mainloop()        
 
     def create_events(self):
-
-        def identifyface(by:str="livestream"):
-            if by == "livestream":
-                btn: tk.button = getWidgetByName("stream.controls.identifyface",self.root)
-                btn.configure(text="Click here to cancel")
-                if variables["livestream_identifying"]:
-                    pass
+        def toggleidentifyface(e:tk.Event):
+            btn: tk.Button = e.widget
+            btn.configure(text="Click here to cancel")
+            if self.variables["livestream_identifying_faces"]:
+                self.variables["livestream_identifying_faces"] = False
+                btn.configure(text="Identify Face")
+        def identifyface(e:tk.Event):
+            if not self.variables["livestream_identifying_faces"] or not len(self.variables["identified_faces"]):
+                return
+            canvas: tk.Canvas = e.widget
+            position: Tuple[int] = canvas.winfo_pointerxy()
+            face: Face
+            for face in self.variables["identified_faces"]:
+                if face.known:
+                    continue
+                if position[0] > face.location[1]*3 and \
+                    position[0] < face.location[3]*3 and \
+                    position[1] > face.location[0]*3 and \
+                    position[1] < face.location[2]*3:
+                    dialog = CategorizeFace(self.root,"Identify this face",self.livestream_last_frame["matrix"][face.location[1]:face.location[3],face.location[0]:face.location[2]])
+                    
+            
+        
         identifyfacebutton: tk.Button = getWidgetByName("stream.controls.identifyface",self.root)
-        #identifyfacebutton.configure(command = )
+        identifyfacebutton.configure(command = toggleidentifyface)
+
+        livestreamcanvas: tk.Canvas = getWidgetByName("stream.livestream",self.root)
+        livestreamcanvas.bind("<Button-1>",identifyface)
 
     def init_commands(self,path:str):
         root = ET.parse(path).getroot()
@@ -162,8 +204,6 @@ def notify_user_stranger(n):
     notification.send()
 
 if __name__ == "__main__":
-    from ui import getWidgetByName
-    
     gui = GUI(["mainpage","stream","personslist","settings"],title="Security System",names={
         "mainpage":"Home",
         "personslist":"Persons List",

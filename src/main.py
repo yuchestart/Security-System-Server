@@ -31,9 +31,9 @@ running: bool = True
 
 @atexit.register
 def cleanup():
-    global server,recognition,running
+    global server,app,running
     server.destroy()
-    recognition.destroy()
+    app.destroy()
     running = False
     print("Program Terminated")
 
@@ -57,8 +57,8 @@ def client_mainloop(sock:socket.socket,addr:str,server:Server):
         return
 
     if detect_this_frame:
-        faces_detected = recognition.detect_faces(frame)
-        labels,hostility = recognition.label_faces(faces_detected,threshold=0.4)
+        faces_detected = app.recognition.detect_faces(frame)
+        labels,hostility = app.recognition.label_faces(faces_detected,threshold=0.4)
         number_of_hostiles = sum(hostility)
         last_threat["detected"] = not not number_of_hostiles
         last_threat["changed"] = last_threat["number"] < number_of_hostiles and number_of_hostiles != 0
@@ -68,6 +68,7 @@ def client_mainloop(sock:socket.socket,addr:str,server:Server):
         for i,face in enumerate(faces_detected):
             newface = face
             newface.name = labels[i]
+            newface.known = True
             faces_detected[i] = newface
     
     app.update_stream(frame,faces_detected)
@@ -75,10 +76,6 @@ def client_mainloop(sock:socket.socket,addr:str,server:Server):
 print("Begin Program")
 
 server = Server()
-recognition = FaceRecognition()
-
-recognition.load_faces()
-
 print(server.server_address,server.server_port)
 
 server.begin_server()
