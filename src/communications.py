@@ -29,14 +29,14 @@ def recieve_livestream_frame(sock: socket.socket,addr: str) -> Tuple[Iterable,bo
     elif prefix != b"LVST":
         print(f"Invalid packet prefix: {prefix}")
         return (1,False)
-    length:bytes = int.to_bytes(sock.recv(10))
+    length:bytes = int.from_bytes(sock.recv(10))
     data: bytes = recvlen(sock,length)
     if not data:
         print("Didn't recieve data")
         return (2,False)
     data = np.frombuffer(data,dtype=np.uint8)
     image = cv2.imdecode(data,cv2.IMREAD_COLOR)
-    return image
+    return (image,True)
 
 
 
