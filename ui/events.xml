@@ -1,0 +1,11 @@
+<Frame name="events">
+    <Label text="Events" font="C:('Segoe UI',20)">
+        <grid row="0" column="0"></grid>
+    </Label>
+    <Label text="View any previous events that have occured, and their respective videos." font="C:('Segoe UI',13,'bold')">
+
+    </Label>
+    <Frame name="eventlist">
+        <grid row="2" colunn="0"></grid>
+    </Frame>
+</Frame>
