@@ -1,0 +1,26 @@
+<Frame name="templates">
+    <Frame name="templateperson">
+        <pack side="left"></pack>
+        <Frame name="imagecontainer">
+            <pack side="left"></pack>
+            <Canvas name="image" width="75" height="75">
+                <pack side="left"></pack>
+            </Canvas>
+        </Frame>
+        <Frame name="infocontainer">
+            <pack side="left"></pack>
+            <Label name="name" text="Stranger">
+                <grid row="0" column='0'></grid>
+            </Label>
+            <Frame name="datecontainer">
+                <grid row="1" column="0"></grid>
+                <Label name="lastdetected" text="XX-XX-XXXX XX:XX:XX">
+                    <pack side="left"></pack>
+                </Label>
+                <Label name="entered" text="XX-XX-XXXX XX:XX:XX">
+                    <pack side="left"></pack>
+                </Label>
+            </Frame>
+        </Frame>
+    </Frame>
+</Frame>
