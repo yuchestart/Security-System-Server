@@ -3,44 +3,59 @@ import face_recognition
 import numpy as np
 import pickle
 from typing import *
-class Face():
-    name:str = None
-    encodings:List[np.array] = None
-    location:tuple = None
-    known:bool = False
-    def __init__(self,encoding:np.array | List[np.array],location=None,known = False,name='Stranger',tolerance = 0.4):
-        if type(encoding) == list:
-            self.encodings = encoding
-        else:
-            self.encodings = [encoding]
-        self.location = location
-        self.known = known
-        self.name = name
-        self.tolerance = tolerance
 
-    def get_distance(self,encoding: np.array):
-        return min(face_recognition.face_distance(self.encodings,encoding))
-    
-    def reinforce(self,encoding: np.array | List[np.array]):
-        if type(encoding) == np.array:
-            self.encodings.append(encoding)
-        elif type(encoding) == list and type(encoding[0]) == np.array:
-            self.encodings.extend(encoding)
-    def __eq__(self, value: object) -> bool:
+class Face():
+    encoding:np.array
+    location:tuple
+    tolerance:float = 0.4
+    def __init__(self,encoding:np.array,location=None):
+        self.encoding = encoding
+        self.location = location
+    def __eq__(self,value:object):
         if not isinstance(value,Face):
             return False
-        try:
-            for myencoding in self.encodings:
-                if any(face_recognition.face_distance([value.encodings],myencoding) > self.tolerance):
-                    return False
-            return True
-        except:
-            return False
+        return face_recognition.face_distance(self.encoding,value.encoding) < Face.tolerance
+
+class Person():
+    name:str
+    description:str
+    faces:List[Face]
+    known:bool
+    def __init__(self,face:Face | List[Face],known=False,name="Stranger",description="Unknown person",tolerance=0.4):
+        if type(face) == Face:
+            self.faces = [face]
+        elif type(face) == list:
+            self.faces = face
+        else:
+            raise TypeError("Invalid type for faces list")
+        self.known = known
+
+    def reinforce(self,face:Face|List[Face]):
+        if type(face) == Face:
+            self.faces.append(face)
+        elif type(face) == list:
+            self.faces.extend(face)
+        else:
+            raise TypeError("Invalid type for faces list")
+
+    def __eq__(self,value:object):
+        if type(value) == Person:
+            for face0 in self.faces:
+                for face1 in value.faces:
+                    if face0 == face1:
+                        return True
+        elif type(value) == Face:
+            for face in self.faces:
+                if face == value:
+                    return True
+        return False
+
 class FaceRecognition():
-    known_faces: Dict[str, List[Face]] = {
+    known_persons: Dict[str,List[Person]] = {
         "hostile":[],
-        "nonhostile":[],
+        "nonhostile":[]
     }
+    
     def detect_faces(self,image_bgr,scale=1,detectencodings=True) -> List[Face]:
         image_rgb = cv2.cvtColor(image_bgr,cv2.COLOR_BGR2RGB)
         if scale != 1:
@@ -68,48 +83,40 @@ class FaceRecognition():
     
     def save_faces(self):
         file = open("../saves/faces.faces","wb")
-        pickle.dump(self.known_faces,file)
+        pickle.dump(self.known_persons,file)
         file.close()
-
-    def remove_face(self,id,category:str,by_name:bool = False,by_encoding:bool = False,by_index:bool = True):
+    
+    def remove_person(self,id,category:str,by_name:bool = False):
         if by_name:
-            newknown:List[Face] = []
-            for i,face in enumerate(self.known_faces[category]):
-                if face.name != id:
-                    newknown.append(face)
-            self.known_faces[category] = newknown
-        elif by_encoding:
-            newknown:List[Face] = []
-            for i,face in enumerate(self.known_faces[category]):
-                if face.encodings != id:
-                    newknown.append(face)
-            self.known_faces[category] = newknown
-        elif by_index:
-            del self.known_faces[category][id]
+            for i,person in enumerate(self.known_persons[category]):
+                if person.name == id:
+                    del self.known_persons[i]
+            return
+        del self.known_persons[category][id]
 
     def load_faces(self):
         try:
             file = open("../saves/faces.faces","rb")
-            self.known_faces = pickle.load(file)
+            self.known_persons = pickle.load(file)
             file.close()
         except FileNotFoundError:
             print("Save file doesn't exist. Try saving something first!")
         except EOFError:
             print("Save file was corrupted. Try saving something!")
-
-    def add_face(self,face:Face,category:str):
-        self.known_faces[category].append(face)
-
+    
+    def add_person(self,person:Person,category:str):
+        self.known_persons[category].append(person)
+    
     def clear_faces(self):
-        self.known_faces = {
-        "hostile":[],
-        "nonhostile":[],
-    }
-
-    def reinforce_face(self,face:Face,id:int,category:str):
-        pass
-
-    def label_faces(self,faces: List[Face],threshold = 0.6) -> Tuple[List[str],List[bool]]:
+        self.known_persons = {
+            "hostile":[],
+            "nonhostile":[],
+        }
+    
+    def reinforce_person(self,id:int,category:str,face:Face):
+        self.known_persons[category][id].reinforce(face)
+    
+    def label_persons(self,faces: List[Face]) -> Tuple[List[Person],List[bool]]:
         def add_label(category):
             if category == "Stranger":
                 labels.append("Stranger")
@@ -117,27 +124,28 @@ class FaceRecognition():
                 return
             labels.append(face_matches[category])
             hostile.append(category == "hostile")
-        labels: List[str] = []
+        labels: List[Person] = []
         hostile: List[bool] = []
         encodings = []
         for face in faces:
             encodings.extend(face.encodings)
         face_categories = ["hostile","nonhostile"]
+        
         for encoding in encodings:
             #First check hostile
             face_distances:Dict[str,float] = {"hostile":None,"nonhostile":None}
 
             face_matches:Dict[str,str] = {"hostile":"Stranger","nonhostile":"Stranger"}
             for category in face_categories:
-                if not len(self.known_faces[category]):
+                if not len(self.known_persons[category]):
                     continue
                 distances = []
-                for face in self.known_faces[category]:
+                for face in self.known_persons[category]:
                     d = face_recognition.face_distance(face.encodings,encoding)
                     distances.append(min(d))
                 min_distance = np.argmin(np.array(distances))
-                if distances[min_distance] < threshold:
-                    face_matches[category] = self.known_faces[category][min_distance].name
+                if distances[min_distance] < Face.tolerance:
+                    face_matches[category] = self.known_persons[category][min_distance]
                     face_distances[category] = distances[min_distance]
             #If either are gone
             if face_distances["hostile"] == None or face_distances["nonhostile"] == None:
