@@ -17,10 +17,14 @@
             <Label text="Connection Status: "><grid row="0" column="0"></grid></Label>
             <Label text="Not Connected" foreground="red" name="connectionstatus"><grid row="0" column="1"></grid></Label>
         </Frame>
-        <Frame>
+        <Frame name="fpscontainer">
             <grid row="0" column="1"></grid>
-            <Label text="FPS: "><grid row="0" column="2"></grid></Label>
-            <Label text="0" foreground="red" name="fps"><grid row="0" column="3"></grid></Label>
+            <Label text="0" name="fps"><grid row="0" column="0"></grid></Label>
+            <Label text="FPS"><grid row="0" column="1"></grid></Label>
+        </Frame>
+        <Frame name="terminateconnectioncontainer">
+            <grid row="0" column="2"></grid>
+            <Button name="terminateconnection" text="Terminate Connection" foreground="white" background="red" activeforeground="white" activebackground="#c80000"><pack side="left"></pack></Button>
         </Frame>
     </Frame>
 </Frame>
