@@ -7,5 +7,9 @@
     <Checkbutton text="Label Faces" name="labelface"><grid row="3" column="0"></grid></Checkbutton>
     <Label text="Application" font="C:('Segoe UI',15)"><grid row='4' column='0'></grid></Label>
     <Checkbutton text="Run on startup" ><grid row="5" column="0"></grid></Checkbutton>
-    <Button text="Quit" command="C:quit"><grid row="6" column="0"></grid></Button>
+    <Frame name="buttoncontrols">
+        <grid row="6" column="0"></grid>
+        <Button text="Quit" command="C:quit"><pack side="left"></pack></Button>
+        <Button text="Delete all faces" name="deletefaces"><pack side="left"></pack></Button>
+    </Frame>
 </Frame>
