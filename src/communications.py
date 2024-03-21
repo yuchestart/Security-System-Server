@@ -38,16 +38,14 @@ def recieve_livestream_frame(sock: socket.socket,addr: str) -> Tuple[Iterable,bo
     image = cv2.imdecode(data,cv2.IMREAD_COLOR)
     return (image,True)
 
-
-
 class Server:
-
     server_socket: socket.socket = None
     client_socket: socket.socket = None
     client_address: str = None
     server_address: str = None
     server_port: int = None
-    client_mainloops: Dict[int,None] = {}
+    client_mainloops: List[Callable] = []
+    stop_client_mainloops: List[Callable] = []
     mainloop_running = False
 
     def __init__(self):
@@ -61,12 +59,17 @@ class Server:
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.server_address,self.server_port))
         self.server_socket.listen(1)
+        self.server_socket.settimeout(10)
     
     def add_client(self):
-        client = self.server_socket.accept()
-        self.client_socket = client[0]
-        self.client_address = client[1]
-    
+        try:
+            client = self.server_socket.accept()
+            self.client_socket = client[0]
+            self.client_address = client[1]
+            return True
+        except socket.timeout:
+            print("Connection had failed: Attempt to connect to client had timed out.")
+        return False
     def begin_client_mainloop(self):
         self.mainloop_running = True
         while self.mainloop_running:
@@ -75,18 +78,11 @@ class Server:
     def stop_client_mainloop(self):
         self.mainloop_running = False
 
-    def add_client_mainloop(self,func):
-        id = len(self.client_mainloops)
-        self.client_mainloops[id] = func
-        return id
+    def bind_client_mainloop(self,func):
+        self.client_mainloops.append(func)
 
-
-    def remove_client_mainloop(self,id):
-        try:
-            del self.client_mainloops[id]
-            return True
-        except:
-            return False
+    def bind_stop_client_mainloop(self):
+        self.c
 
     def send_handshake(self) -> bool:
         self.client_socket.sendall(b"HNDS")
@@ -95,6 +91,10 @@ class Server:
             print("No response" if not response else f"Invalid handshake: {str(response)}")
             return False
         return True
+    
+    def disconnect(self):
+        self.client_socket.close()
+
     def __del__(self):
         self.destroy()
 

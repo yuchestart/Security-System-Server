@@ -36,7 +36,7 @@ def load_tkinter(element: ET.Element, parent: tk.Widget) -> tk.Widget:
         widget.pack(**display_parameters)
     elif display_mode == "grid":
         if "sticky" not in display_parameters:
-            display_parameters["sticky"] = "w" 
+            display_parameters["sticky"] = "nw" 
         widget.grid(**display_parameters)
     return widget
 

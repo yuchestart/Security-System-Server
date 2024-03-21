@@ -8,9 +8,11 @@ class Face():
     encoding:np.array
     location:tuple
     tolerance:float = 0.4
-    def __init__(self,encoding:np.array,location=None):
+    name:str
+    def __init__(self,encoding:np.array,location=None,name=None):
         self.encoding = encoding
         self.location = location
+        self.name = name
     def __eq__(self,value:object):
         if not isinstance(value,Face):
             return False
@@ -117,21 +119,23 @@ class FaceRecognition():
         self.known_persons[category][id].reinforce(face)
     
     def label_persons(self,faces: List[Face]) -> Tuple[List[Person],List[bool]]:
-        def add_label(category):
+        def add_label(category,face:Face):
             if category == "Stranger":
-                labels.append("Stranger")
+                labels.append(face)
                 hostile.append(False)
                 return
-            labels.append(face_matches[category])
+            newface = face
+            newface.name = face_matches[category]
+            labels.append(newface)
             hostile.append(category == "hostile")
-        labels: List[Person] = []
+        labels: List[Face] = []
         hostile: List[bool] = []
         encodings = []
         for face in faces:
-            encodings.extend(face.encodings)
+            encodings.extend(face.encoding)
         face_categories = ["hostile","nonhostile"]
         
-        for encoding in encodings:
+        for i,encoding in enumerate(encodings):
             #First check hostile
             face_distances:Dict[str,float] = {"hostile":None,"nonhostile":None}
 
@@ -151,15 +155,15 @@ class FaceRecognition():
             if face_distances["hostile"] == None or face_distances["nonhostile"] == None:
                 #I don't have a match! It's a stranger.
                 if face_distances["hostile"] == None and face_distances["nonhostile"] == None:
-                    add_label("Stranger")
+                    add_label("Stranger",face[i])
                 elif face_distances["hostile"] == None:
-                    add_label("nonhostile")
+                    add_label("nonhostile",face[i])
                 else:
                     add_label("hostile")
             elif face_distances["nonhostile"] < face_distances["hostile"]:
-                add_label("nonhostile")
+                add_label("nonhostile",face[i])
             else:
-                add_label("hostile")
+                add_label("hostile",face[i])
         return (labels,hostile)
 
     def destroy(self):

@@ -2,8 +2,9 @@ experimental
 *.ipnyb
 __pycache__
 train
+saves
 documents
 config
 *.old.py
 *.faces
-saves
+
