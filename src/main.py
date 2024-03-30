@@ -45,7 +45,8 @@ last_threat: Dict[str,Any] = {
     "detected":False,
     "time":-1,
     "changed":False,
-    "number":0
+    "number":0,
+    "strangers":0
 }
 notifications: Dict[str,Any] = {
     "hostile":False,
@@ -87,10 +88,10 @@ def client_mainloop(sock:socket.socket,addr:str,server:Server):
         server.disconnect()
         app.update_connection_status(False)
         return
-    
+    strangers = last_threat["strangers"]
     if detect_this_frame:
         detected = app.recognition.detect_faces(frame)
-        labels,hostility = app.recognition.label_persons(detected)
+        labels,hostility,strangers = app.recognition.label_persons(detected)
         number_of_hostiles = sum(hostility)
         last_threat["detected"] = not not number_of_hostiles
         last_threat["changed"] = (last_threat["number"] < number_of_hostiles) and number_of_hostiles != 0
@@ -98,13 +99,18 @@ def client_mainloop(sock:socket.socket,addr:str,server:Server):
         if last_threat["detected"]:
             last_threat["time"] = time.time()
         faces_detected = labels
+        
     app.update_stream(frame,faces_detected)
 
     if last_threat["detected"] and last_threat["changed"]:
         last_threat["changed"] = False
-        notify_user_hostile()
+        notify_user_hostile(last_threat["number"])
     if time.time() - last_threat["time"] > 600:
         notify_user_clear()
+    if last_threat["strangers"] != strangers:
+        last_threat["strangers"] = strangers
+        notify_user_stranger(last_threat["strangers"])
+
 
     detect_this_frame = not detect_this_frame
 

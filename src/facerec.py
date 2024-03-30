@@ -93,7 +93,7 @@ class FaceRecognition():
     }
     recently_detected: Dict[str,List[Person]] = {
         "hostile":[],
-        "nonhostile":[]
+        "stranger":[]
     }
 
 
@@ -155,18 +155,23 @@ class FaceRecognition():
     def clear_faces(self):
         self.known_persons = {
             "hostile":[],
-            "nonhostile":[],
+            "nonhostile":[]
+        }
+        self.recently_detected = {
+            "hostile":[],
+            "stranger":[]
         }
     
     def reinforce_person(self,id:int,category:str,face:Face):
         self.known_persons[category][id].reinforce(face)
     
-    def label_persons(self,faces: List[Face]) -> Tuple[List[Face],List[bool]]:
+    def label_persons(self,faces: List[Face]) -> Tuple[List[Face],List[bool],int]:
         '''
         Output:
         [Faces with names, If they are hostile, If they are known]
         '''
         hostility: List[bool] = []
+        strangers: int = 0
         labels: List[Face] = []
         face_categories = ["hostile","nonhostile"]
         for face in faces:
@@ -185,6 +190,7 @@ class FaceRecognition():
             if not (match["hostile"] or match["nonhostile"]):
                 labels.append(face)
                 hostility.append(False)
+                strangers += 1
             elif match["hostile"] and not match["nonhostile"]:
                 newface = face
                 newface.name = match["hostile"].name
@@ -206,6 +212,7 @@ class FaceRecognition():
                 else:
                     cat = "hostile"
                     match["hostile"].see()
+                    self.recently_detected["hostile"].append(match["hostile"])
                 newface = face
                 newface.known = True
                 newface.name = match[cat].name
@@ -213,7 +220,7 @@ class FaceRecognition():
                 if cat == "hostile":
                     hostility.append(True)
 
-        return (labels,hostility)
+        return (labels,hostility,strangers)
 
     def destroy(self):
         cv2.destroyAllWindows()

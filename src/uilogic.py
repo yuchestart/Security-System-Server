@@ -189,6 +189,7 @@ class GUI:
                         newperson = Person(face,known=True,name=dialog.values["name"],description="")
                         print()
                         self.recognition.add_person(newperson,"hostile" if dialog.values["hostile"] else "nonhostile")
+                        self.recognition.save_faces()
                         #print("hostile" if dialog.values["hostile"] else "non-hostile")
         def updatepersonslist():
             lists:List[tk.Widget] = [
