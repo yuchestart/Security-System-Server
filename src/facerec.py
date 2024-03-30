@@ -2,6 +2,8 @@ import cv2
 import face_recognition
 import numpy as np
 import pickle
+import time
+
 from typing import *
 
 class Face():
@@ -9,21 +11,26 @@ class Face():
     location:tuple
     tolerance:float = 0.4
     name:str
-    def __init__(self,encoding:np.array,location=None,name=None):
+    known:bool
+    def __init__(self,encoding:np.array,location=None,name="Unknown",known=False):
         self.encoding = encoding
         self.location = location
         self.name = name
+        self.known = known
     def __eq__(self,value:object):
         if not isinstance(value,Face):
             return False
-        return face_recognition.face_distance(self.encoding,value.encoding) < Face.tolerance
+        return face_recognition.face_distance([self.encoding],value.encoding) < Face.tolerance
 
 class Person():
     name:str
     description:str
     faces:List[Face]
     known:bool
-    def __init__(self,face:Face | List[Face],known=False,name="Stranger",description="Unknown person",tolerance=0.4):
+    date_entered: float
+    date_last_seen: float
+    cover_picture: np.array
+    def __init__(self,face:Face | List[Face]=False,name="Unknown",description="Unknown person",known=False):
         if type(face) == Face:
             self.faces = [face]
         elif type(face) == list:
@@ -31,6 +38,8 @@ class Person():
         else:
             raise TypeError("Invalid type for faces list")
         self.known = known
+        self.name = name
+        self.description = description
 
     def reinforce(self,face:Face|List[Face]):
         if type(face) == Face:
@@ -39,6 +48,31 @@ class Person():
             self.faces.extend(face)
         else:
             raise TypeError("Invalid type for faces list")
+
+    def see(self):
+        self.date_last_seen = time.time()
+
+    def enter(self):
+        self.date_entered = time.time()
+
+    def get_distance(self,value:object):
+        if type(value) == Person:
+            md = -1
+            for face0 in self.faces:
+                for face1 in value.faces:
+                    distance = face_recognition.face_distance([face0.encoding],face1.encoding)
+                    if distance < md or md == -1:
+                        md = distance
+            return md
+        elif type(value) == Face:
+            md = -1
+            for face in self.faces:
+                distance = face_recognition.face_distance([face.encoding],value.encoding)
+                if distance < md or md == -1:
+                    md = distance
+            return md
+        else:
+            raise TypeError(f"Cannot compare type Person and type {type(value)}.")
 
     def __eq__(self,value:object):
         if type(value) == Person:
@@ -57,7 +91,12 @@ class FaceRecognition():
         "hostile":[],
         "nonhostile":[]
     }
-    
+    recently_detected: Dict[str,List[Person]] = {
+        "hostile":[],
+        "nonhostile":[]
+    }
+
+
     def detect_faces(self,image_bgr,scale=1,detectencodings=True) -> List[Face]:
         image_rgb = cv2.cvtColor(image_bgr,cv2.COLOR_BGR2RGB)
         if scale != 1:
@@ -84,7 +123,7 @@ class FaceRecognition():
         return faces
     
     def save_faces(self):
-        file = open("../saves/faces.faces","wb")
+        file = open("../saves/persons.persons","wb")
         pickle.dump(self.known_persons,file)
         file.close()
     
@@ -107,6 +146,10 @@ class FaceRecognition():
             print("Save file was corrupted. Try saving something!")
     
     def add_person(self,person:Person,category:str):
+        newperson = person
+        newperson.known = True
+        newperson.enter()
+        newperson.see()
         self.known_persons[category].append(person)
     
     def clear_faces(self):
@@ -118,53 +161,59 @@ class FaceRecognition():
     def reinforce_person(self,id:int,category:str,face:Face):
         self.known_persons[category][id].reinforce(face)
     
-    def label_persons(self,faces: List[Face]) -> Tuple[List[Person],List[bool]]:
-        def add_label(category,face:Face):
-            if category == "Stranger":
-                labels.append(face)
-                hostile.append(False)
-                return
-            newface = face
-            newface.name = face_matches[category]
-            labels.append(newface)
-            hostile.append(category == "hostile")
+    def label_persons(self,faces: List[Face]) -> Tuple[List[Face],List[bool]]:
+        '''
+        Output:
+        [Faces with names, If they are hostile, If they are known]
+        '''
+        hostility: List[bool] = []
         labels: List[Face] = []
-        hostile: List[bool] = []
-        encodings = []
-        for face in faces:
-            encodings.extend(face.encoding)
         face_categories = ["hostile","nonhostile"]
-        
-        for i,encoding in enumerate(encodings):
-            #First check hostile
-            face_distances:Dict[str,float] = {"hostile":None,"nonhostile":None}
-
-            face_matches:Dict[str,str] = {"hostile":"Stranger","nonhostile":"Stranger"}
+        for face in faces:
+            match:Dict[str,Person] = {"hostile":None,"nonhostile":None}
+            distance = {"hostile":-1,"nonhostile":-1}
             for category in face_categories:
                 if not len(self.known_persons[category]):
                     continue
-                distances = []
-                for face in self.known_persons[category]:
-                    d = face_recognition.face_distance(face.encodings,encoding)
-                    distances.append(min(d))
-                min_distance = np.argmin(np.array(distances))
-                if distances[min_distance] < Face.tolerance:
-                    face_matches[category] = self.known_persons[category][min_distance]
-                    face_distances[category] = distances[min_distance]
-            #If either are gone
-            if face_distances["hostile"] == None or face_distances["nonhostile"] == None:
-                #I don't have a match! It's a stranger.
-                if face_distances["hostile"] == None and face_distances["nonhostile"] == None:
-                    add_label("Stranger",face[i])
-                elif face_distances["hostile"] == None:
-                    add_label("nonhostile",face[i])
-                else:
-                    add_label("hostile")
-            elif face_distances["nonhostile"] < face_distances["hostile"]:
-                add_label("nonhostile",face[i])
+                candidate: Person
+                for candidate in self.known_persons[category]:
+                    if candidate == face:
+                        d = candidate.get_distance(face)
+                        if d < distance[category] or distance[category] == -1:
+                            distance[category] = d
+                            match[category] = candidate
+            if not (match["hostile"] or match["nonhostile"]):
+                labels.append(face)
+                hostility.append(False)
+            elif match["hostile"] and not match["nonhostile"]:
+                newface = face
+                newface.name = match["hostile"].name
+                newface.known = True
+                match["hostile"].see()
+                labels.append(newface)
+                hostility.append(True)                
+            elif match["nonhostile"] and not match["hostile"]:
+                newface = face
+                newface.name = match["nonhostile"].name
+                newface.known = True
+                match["nonhostile"].see()
+                labels.append(newface)
+                hostility.append(True)
             else:
-                add_label("hostile",face[i])
-        return (labels,hostile)
+                if distance["nonhostile"] < distance["hostile"]:
+                    cat = "nonhostile"
+                    match["nonhostile"].see()
+                else:
+                    cat = "hostile"
+                    match["hostile"].see()
+                newface = face
+                newface.known = True
+                newface.name = match[cat].name
+                labels.append(newface)
+                if cat == "hostile":
+                    hostility.append(True)
+
+        return (labels,hostility)
 
     def destroy(self):
         cv2.destroyAllWindows()

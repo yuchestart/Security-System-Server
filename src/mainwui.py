@@ -94,7 +94,7 @@ if not handshake:
     quit()
 
 print("Handshake accepted; Beginning mainloop")
-server.add_client_mainloop(client_mainloop)
+server.bind_client_mainloop(client_mainloop)
 server_mainloop = threading.Thread(target=server.begin_client_mainloop)
 server_mainloop.start()
 

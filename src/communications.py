@@ -48,12 +48,16 @@ class Server:
     stop_client_mainloops: List[Callable] = []
     mainloop_running = False
 
-    def __init__(self):
-        config_file = open("../config/communications.json")
-        config = json.load(config_file)
-        config_file.close()
-        self.server_address = config["server_address"]
-        self.server_port = config["server_port"]
+    def __init__(self,ip:str=None,port:int=None):
+        if ip and port:
+            self.server_address = ip
+            self.server_port = int(port)
+        else:
+            config_file = open("../config/communications.json")
+            config = json.load(config_file)
+            config_file.close()
+            self.server_address = config["server_address"]
+            self.server_port = config["server_port"]
 
     def begin_server(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -73,8 +77,8 @@ class Server:
     def begin_client_mainloop(self):
         self.mainloop_running = True
         while self.mainloop_running:
-            for id in self.client_mainloops:
-                self.client_mainloops[id](self.client_socket,self.client_address,self)
+            for mainloop in self.client_mainloops:
+                mainloop(self.client_socket,self.client_address,self)
     def stop_client_mainloop(self):
         self.mainloop_running = False
 
@@ -82,7 +86,7 @@ class Server:
         self.client_mainloops.append(func)
 
     def bind_stop_client_mainloop(self):
-        self.c
+        pass
 
     def send_handshake(self) -> bool:
         self.client_socket.sendall(b"HNDS")
@@ -94,6 +98,13 @@ class Server:
     
     def disconnect(self):
         self.client_socket.close()
+
+    def order_shutdown(self):
+        try:
+            while True:
+                self.client_socket.sendall(b"STDN")
+        except:
+            return
 
     def __del__(self):
         self.destroy()

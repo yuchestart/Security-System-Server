@@ -11,17 +11,35 @@
             <grid row="0" column="1"></grid>
         </Label>
     </Frame>
-    <Label text="Recently detected persons" font="C:('Segoe UI',15)">
+    <Label text="Recently detected threats" font="C:('Segoe UI',15)">
         <grid row="2" column="0"></grid>
     </Label>
-    <Frame name="recentlydetectedpersons">
+    <Frame name="recentlydetectedthreats">
         <grid row="3" column="0"></grid>
+        <Frame></Frame>
         <!--
             This is an example here:
             <Frame>
                 <grid row="0" column="0"></grid>
                 <Label text="00:00:00 01/01/0000" name="persondate"><pack side="TK::LEFT"></pack></Label>
-                <Label text="Stranger" name="personname"><pack side="TK::LEFT"></pack></Label>
+                <Label text="Unknown" name="personname"><pack side="TK::LEFT"></pack></Label>
+                <Button text="Add Identity" name="identity"><pack side="TK::LEFT"></pack></Button>
+            </Frame>
+        -->
+    </Frame>
+    <Label text="Recently detected strangers" font="C:('Segoe UI',15)">
+        <grid row="2" column="0"></grid>
+        <Frame></Frame>
+    </Label>
+    <Frame name="recentlydetectedstrangers">
+        <grid row="3" column="0"></grid>
+        <Frame></Frame>
+        <!--
+            This is an example here:
+            <Frame>
+                <grid row="0" column="0"></grid>
+                <Label text="00:00:00 01/01/0000" name="persondate"><pack side="TK::LEFT"></pack></Label>
+                <Label text="Unknown" name="personname"><pack side="TK::LEFT"></pack></Label>
                 <Button text="Add Identity" name="identity"><pack side="TK::LEFT"></pack></Button>
             </Frame>
         -->

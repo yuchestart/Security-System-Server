@@ -14,10 +14,10 @@
             </Label>
             <Frame name="datecontainer">
                 <grid row="1" column="0"></grid>
-                <Label name="lastdetected" text="XX-XX-XXXX XX:XX:XX">
+                <Label name="lastdetected" text="XXXX-XX-XX XX:XX:XX">
                     <pack side="left"></pack>
                 </Label>
-                <Label name="entered" text="XX-XX-XXXX XX:XX:XX">
+                <Label name="entered" text="XXXX-XX-XX XX:XX:XX">
                     <pack side="left"></pack>
                 </Label>
             </Frame>

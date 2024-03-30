@@ -14,11 +14,21 @@ import time
 import sys
 from stoppablethread import Thread
 
+customconnectionparams: Dict[str,Any] = {
+    "ip":None,
+    "port":None
+}
+
+for argument in sys.argv:
+    arg = argument.split("=")
+    if arg[0] in customconnectionparams:
+        customconnectionparams[arg[0]] = arg[1]
+
 #Define cleanup code
 def cleanup():
-    global server,app,running
+    global server,app,running,serverthread
     serverthread.terminate()
-    server.client_socket.sendall(b"STDN")
+    server.order_shutdown()
     server.destroy()
     app.destroy()
     running = False
@@ -45,7 +55,7 @@ notifications: Dict[str,Any] = {
 running:bool = True
 
 def start_connection():
-    global serverthread,server
+    global serverthread,server,app
     server.add_client()
 
     print("Client Accepted")
@@ -53,9 +63,9 @@ def start_connection():
     handshake = server.send_handshake()
     if not handshake:
         quit()
-
+    app.update_connection_status(True)
     print("Handshake accepted; Beginning mainloop")
-    server.add_client_mainloop(client_mainloop)
+    server.bind_client_mainloop(client_mainloop)
     serverthread = Thread(target=server.begin_client_mainloop)
     serverthread.start()
     
@@ -64,6 +74,7 @@ def client_mainloop(sock:socket.socket,addr:str,server:Server):
     global detect_this_frame, faces_detected, displaying_video, app, running
     if not running:
         server.stop_client_mainloop()
+        return
     sock.sendall(b"CTLS")
 
     frame,ret = recieve_livestream_frame(sock,addr)
@@ -82,7 +93,7 @@ def client_mainloop(sock:socket.socket,addr:str,server:Server):
         labels,hostility = app.recognition.label_persons(detected)
         number_of_hostiles = sum(hostility)
         last_threat["detected"] = not not number_of_hostiles
-        last_threat["changed"] = last_threat["number"] < number_of_hostiles and number_of_hostiles != 0
+        last_threat["changed"] = (last_threat["number"] < number_of_hostiles) and number_of_hostiles != 0
         last_threat["number"] = number_of_hostiles
         if last_threat["detected"]:
             last_threat["time"] = time.time()
@@ -90,18 +101,22 @@ def client_mainloop(sock:socket.socket,addr:str,server:Server):
     app.update_stream(frame,faces_detected)
 
     if last_threat["detected"] and last_threat["changed"]:
-        pass
+        last_threat["changed"] = False
+        notify_user_hostile()
+    if time.time() - last_threat["time"] > 600:
+        notify_user_clear()
+
+    detect_this_frame = not detect_this_frame
 
 print("Begin program")
 
-server = Server()
+server = Server(**customconnectionparams)
 print(server.server_address,server.server_port)
 
 server.begin_server()
 
 print("Server Created")
 
-start_connection()
 
 app = GUI(["mainpage","stream","personslist","settings"],title="Security System",names={
     "mainpage":"Home",
@@ -109,5 +124,7 @@ app = GUI(["mainpage","stream","personslist","settings"],title="Security System"
     "stream":"Livestream",
     "settings":"Settings"
 },icon="../assets/icon.png")
+
+start_connection()
 
 app.begin()

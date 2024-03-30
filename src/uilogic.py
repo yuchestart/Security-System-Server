@@ -1,5 +1,5 @@
 from ui import load_xml,image_cv2tk,getWidgetByName
-from facerec import Face,FaceRecognition
+from facerec import Face,FaceRecognition,Person
 import tkinter as tk
 import tkinter.ttk as ttk
 import xml.etree.ElementTree as ET
@@ -9,7 +9,7 @@ from tkinter.simpledialog import Dialog
 from notifypy import Notify
 from typing import *
 from PIL import Image
-
+import datetime
 
 
 class CategorizeFace(Dialog):
@@ -17,10 +17,9 @@ class CategorizeFace(Dialog):
         
         self.category_value = tk.StringVar()
         self.name_value = tk.StringVar()
-        self.name_value.set("Stranger")
+        self.name_value.set("Unknown")
         self.newperson = tk.Frame()
         self.existingperson = tk.Frame()
-        
         self.label = tk.Label(master,text="Identify Face",font=("Segoe UI",15))
         self.cat_description = tk.Label(master,text="Category:",font=("Segoe UI",15))
         self.name_description = tk.Label(master,text="Name:",font=("Segoe UI",15))
@@ -45,6 +44,7 @@ class CategorizeFace(Dialog):
         self.returned = True
 
 class GUI:
+    #region
     root: tk.Tk = None
     navbar: tk.Frame = None
     screens: Dict[str,tk.Frame] = {}
@@ -67,7 +67,7 @@ class GUI:
     icon:tk.PhotoImage = None
     switchscreen_eventbindings: Dict[str,List[Callable]] = {}
     templates:tk.Frame = None
-
+    #endregion
     def __init__(self,screens:List[str],path:str = "../ui/",title:str="Python GUI",names:Dict[str,str] = {},icon:str=False):
         self.root = tk.Tk()
         self.root.title(title)
@@ -118,12 +118,13 @@ class GUI:
         streamcanvas.create_image((0,0),anchor="nw",image=photoimage)
         self.livestream_last_frame["photoimage"] = photoimage
         self.livestream_last_frame["matrix"] = cv2.resize(image,(0,0),fx=3,fy=3)
-        self.variables["detected_faces"] = facesDetected if facesDetected else []
+        self.variables["detected_faces"] = facesDetected if facesDetected else \
+            (self.variables["detected_faces"] if self.variables["detected_faces"] else [])
         fpstext = getWidgetByName("stream.status.fpscontainer.fps",self.root)
         newtime = time.time()
         fpstext.configure(text=f"{(1/(newtime-self.livestream_last_frame['time'])):.3f}")
         self.livestream_last_frame["time"] = newtime
-        
+        face:Face
         for face in self.variables["detected_faces"]:
             location = face.location
             streamcanvas.create_rectangle(
@@ -167,8 +168,8 @@ class GUI:
                 print(self.variables["livestream_identifying_faces"],self.variables["detected_faces"])
                 return
             
-            canvas: tk.Canvas = e.widget
-            left,top = map(int,canvas.winfo_toplevel().winfo_geometry().split("+")[1:])
+            #canvas: tk.Canvas = e.widget
+            #left,top = map(int,canvas.winfo_toplevel().winfo_geometry().split("+")[1:])
             #print(e.x,e.y)
             position: Tuple[int] = (e.x,e.y)
             face: Face
@@ -185,11 +186,10 @@ class GUI:
                     #    self.livestream_last_frame["matrix"][face.location[1]:face.location[3],face.location[0]:face.location[2]]
                     )
                     if dialog.returned:
-                        newface = face
-                        newface.name = dialog.values["name"]
-                        newface.known = True
-                        self.recognition.add_face(newface,"hostile" if dialog.values["hostile"] else "nonhostile")
-                        print("hostile" if dialog.values["hostile"] else "non-hostile")
+                        newperson = Person(face,known=True,name=dialog.values["name"],description="")
+                        print()
+                        self.recognition.add_person(newperson,"hostile" if dialog.values["hostile"] else "nonhostile")
+                        #print("hostile" if dialog.values["hostile"] else "non-hostile")
         def updatepersonslist():
             lists:List[tk.Widget] = [
                 getWidgetByName("personslist.library.hostilepersons",self.root),
@@ -199,7 +199,7 @@ class GUI:
             for i,l in enumerate(lists):
                 for child in l.winfo_children():
                     child.destroy()
-                for j,face in enumerate(self.recognition.known_faces[names[i]]):
+                for j,person in enumerate(self.recognition.known_persons[names[i]]):
                     listitem: tk.Frame = tk.Frame(l,name=f"person{j}")
                     imgcontainer = tk.Frame(listitem,name="imagecontainer")
                     infocontainer = tk.Frame(listitem,name="infocontainer")
@@ -209,14 +209,19 @@ class GUI:
                     datecontainer.grid(row=1,column=0,sticky="w")
                     canvas = tk.Canvas(imgcontainer,width=75,height=75)
                     canvas.pack(side="left")
-                    tk.Label(infocontainer,name="name",text=face.name).grid(row=0,column=0,sticky="w")
-                    tk.Label(datecontainer,name="lastdetected",text="Last Detected: UNKNOWN").pack(side="left")
-                    tk.Label(datecontainer,name="entered",text="Time Entered: UNKNOWN").pack(side="left")
+                    
+                    datedetected: str = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(person.date_last_seen))
+                    dateentered: str = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(person.date_entered))
+
+                    tk.Label(infocontainer,name="name",text=person.name).grid(row=0,column=0,sticky="w")
+                    tk.Label(datecontainer,name="lastdetected",text="Last Detected: %s" % datedetected).pack(side="left")
+                    tk.Label(datecontainer,name="entered",text="Time Entered: %s" % dateentered).pack(side="left")
                     listitem.grid(row=j,column=0,sticky="nw")
         def delete_faces():
             self.recognition.clear_faces()
             self.recognition.save_faces()
-
+        def update_recently_detected():
+            pass
         identifyfacebutton: tk.Button = getWidgetByName("stream.controls.identifyface",self.root)
         identifyfacebutton.configure(command = toggleidentifyface)
         livestreamcanvas: tk.Canvas = getWidgetByName("stream.livestream",self.root)
@@ -224,6 +229,7 @@ class GUI:
         clearfacesbutton:tk.Button = getWidgetByName("settings.buttoncontrols.deletefaces",self.root)
         clearfacesbutton.configure(command = delete_faces)
         self.bind_switchscreen_event("personslist",updatepersonslist)
+        self.bind_switchscreen_event("mainpage",update_recently_detected)
 
     def bind_switchscreen_event(self,screen,binded):
         if screen not in self.switchscreen_eventbindings:
@@ -239,6 +245,11 @@ class GUI:
             for value in variable:
                 widget = getWidgetByName(value.text,self.root)
                 widget.configure(variable = self.configuration[variable.attrib["name"]])
+
+    def reload(self):
+        if self.current_screen in self.switchscreen_eventbindings:
+            for binding in self.switchscreen_eventbindings[self.current_screen]:
+                binding()
 
 def notify_user_hostile(n):
     notification = Notify()
@@ -269,7 +280,8 @@ def notify_user_stranger(n):
 
 if __name__ == "__main__":
 
-    import threading
+    from stoppablethread import Thread
+    import atexit
 
     gui = GUI(["mainpage","stream","personslist","settings","templates"],title="Security System",names={
         "mainpage":"Home",
@@ -279,26 +291,45 @@ if __name__ == "__main__":
     },icon="../assets/icon.png")
     gui.switch_screens("stream")
 
+    @atexit.register
+    def stop():
+        global shallgo, thread#, cap
+        shallgo = False
+        thread.terminate()
+        #cap.release()
 
-    cap = cv2.VideoCapture(0)
+    #cap = cv2.VideoCapture(0)
+    #def go():
+    #    global shallgo
+    #    yes = False
+    #    while True:
+    #        if not shallgo:
+    #            return
+    #        ret,image = cap.read()
+    #        if not ret:
+    #            return
+    #        if yes:
+    #            faces = gui.recognition.detect_faces(image)
+    #            gui.update_stream(image,faces)
+    #        else:
+    #            gui.update_stream(image)
+    #        yes = not yes
+    #shallgo = True
+    shallgo = True
     def go():
         global shallgo
         yes = False
-        while True:
-            if not shallgo:
-                return
-            ret,image = cap.read()
-            if not ret:
-                return
+        while shallgo:
+            image = cv2.imread("../train/placeholder.png")
             if yes:
                 faces = gui.recognition.detect_faces(image)
-                gui.update_stream(image,faces)
+                labels,hostility = gui.recognition.label_persons(faces)
+                gui.update_stream(image,labels)
             else:
                 gui.update_stream(image)
             yes = not yes
-    shallgo = True
-    thread = threading.Thread(target=go)
+            time.sleep(0.05)
+    thread = Thread(target=go)
     thread.start()
     gui.begin()
-    shallgo = False
-    cap.release()
+    
