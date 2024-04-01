@@ -1,3 +1,5 @@
+from ui import image_cv2tk
+import tkinter as tk
 import cv2
 import face_recognition
 import numpy as np
@@ -29,7 +31,10 @@ class Person():
     known:bool
     date_entered: float
     date_last_seen: float
-    cover_picture: np.array
+    cover_picture: Dict[str,tk.PhotoImage|cv2.typing.MatLike] = {
+        "matrix":None,
+        "image":None
+    }
     def __init__(self,face:Face | List[Face]=False,name="Unknown",description="Unknown person",known=False):
         if type(face) == Face:
             self.faces = [face]
@@ -49,8 +54,11 @@ class Person():
         else:
             raise TypeError("Invalid type for faces list")
 
-    def see(self):
+    def see(self,picture:cv2.typing.MatLike = None,face:Face = None):
         self.date_last_seen = time.time()
+        if picture is not None:
+            resized: cv2.typing.MatLike = cv2.resize(picture[face.location[0]:face.location[2],face.location[3]:face.location[1]],(75,75))
+            self.cover_picture["matrix"] = resized
 
     def enter(self):
         self.date_entered = time.time()
@@ -85,6 +93,33 @@ class Person():
                 if face == value:
                     return True
         return False
+
+    def getimage(self):
+        self.cover_picture["image"] = image_cv2tk(self.cover_picture["matrix"])
+
+    def serialize(self) -> Dict[str,Any]:
+        return {
+            "name":self.name,
+            "description":self.description,
+            "faces":self.faces,
+            "known":self.known,
+            "date_entered":self.date_entered,
+            "date_last_seen":self.date_last_seen,
+            "cover_picture":self.cover_picture["matrix"],
+        }
+        
+
+    @staticmethod
+    def deserialize(serialized: Dict[str,Any]):
+        ret = Person(
+            serialized["faces"],
+            serialized["name"],
+            serialized["description"],
+            serialized["known"]
+        )
+        ret.cover_picture["matrix"] = serialized["cover_picture"]
+        ret.cover_picture["image"] = image_cv2tk(ret.cover_picture["matrix"])
+        return ret
 
 class FaceRecognition():
     known_persons: Dict[str,List[Person]] = {
@@ -124,7 +159,12 @@ class FaceRecognition():
     
     def save_faces(self):
         file = open("../saves/persons.persons","wb")
-        pickle.dump(self.known_persons,file)
+        tosave:Dict[str,List[Dict[str,Any]]] = {}
+        for category in ["hostile","nonhostile"]:
+            tosave[category] = []
+            for person in self.known_persons[category]:
+                tosave[category].append(person.serialize())
+        pickle.dump(tosave,file)
         file.close()
     
     def remove_person(self,id,category:str,by_name:bool = False):
@@ -138,7 +178,11 @@ class FaceRecognition():
     def load_faces(self):
         try:
             file = open("../saves/faces.faces","rb")
-            self.known_persons = pickle.load(file)
+            toload = pickle.load(file)
+            for category in ["hostile","nonhostile"]:
+                self.known_persons[category] = []
+                for person in toload[category]:
+                    self.known_persons[category].append(Person.deserialize(person))
             file.close()
         except FileNotFoundError:
             print("Save file doesn't exist. Try saving something first!")
@@ -165,7 +209,7 @@ class FaceRecognition():
     def reinforce_person(self,id:int,category:str,face:Face):
         self.known_persons[category][id].reinforce(face)
     
-    def label_persons(self,faces: List[Face]) -> Tuple[List[Face],List[bool],int]:
+    def label_persons(self,faces: List[Face],image: cv2.typing.MatLike = None) -> Tuple[List[Face],List[bool],int]:
         '''
         Output:
         [Faces with names, If they are hostile, If they are known]
@@ -195,23 +239,23 @@ class FaceRecognition():
                 newface = face
                 newface.name = match["hostile"].name
                 newface.known = True
-                match["hostile"].see()
+                match["hostile"].see(image,face)
                 labels.append(newface)
                 hostility.append(True)                
             elif match["nonhostile"] and not match["hostile"]:
                 newface = face
                 newface.name = match["nonhostile"].name
                 newface.known = True
-                match["nonhostile"].see()
+                match["nonhostile"].see(image,face)
                 labels.append(newface)
                 hostility.append(True)
             else:
                 if distance["nonhostile"] < distance["hostile"]:
                     cat = "nonhostile"
-                    match["nonhostile"].see()
+                    match["nonhostile"].see(image,face)
                 else:
                     cat = "hostile"
-                    match["hostile"].see()
+                    match["hostile"].see(image,face)
                     self.recently_detected["hostile"].append(match["hostile"])
                 newface = face
                 newface.known = True

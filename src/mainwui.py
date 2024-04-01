@@ -72,7 +72,7 @@ def client_mainloop(sock:socket.socket,addr:str,server:Server):
             faces_detected[i] = newface
     
     app.update_stream(frame,faces_detected)
-
+    
     if last_threat["detected"] and last_threat["changed"]:
         pass
 

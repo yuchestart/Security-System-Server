@@ -51,7 +51,7 @@ class GUI:
     current_screen: str = None
     recognition: FaceRecognition = None
     closed:bool = False
-    configuration: Dict[str,Any] = {
+    configuration: Dict[str,tk.Variable] = {
         "face_detection_enabled":tk.BooleanVar,
         "face_labeling_enabled":tk.BooleanVar,
     }
@@ -104,7 +104,7 @@ class GUI:
     
     def update_connection_status(self,status:bool):
         connectionstatuses:List[tk.Label] = [
-            self.root.nametowidget("mainmenu.connectionstatuscontainer.connectionstatus"),
+            self.root.nametowidget("mainpage.connectionstatuscontainer.connectionstatus"),
             self.root.nametowidget("stream.status.connectionstatuscontainer.connectionstatus")
         ]
         for label in connectionstatuses:
@@ -139,9 +139,6 @@ class GUI:
         self.configuration[variable] = value
         self.update_gui()
 
-    def update_gui(self):
-        pass
-
     def on_close(self):
         self.root.iconify()
     
@@ -162,35 +159,22 @@ class GUI:
             else:
                 self.variables["livestream_identifying_faces"] = True
         def identifyface(e:tk.Event):
-            #print("YAY")
             if not self.variables["livestream_identifying_faces"] or not len(self.variables["detected_faces"]):
-                print("BOO")
-                print(self.variables["livestream_identifying_faces"],self.variables["detected_faces"])
                 return
-            
-            #canvas: tk.Canvas = e.widget
-            #left,top = map(int,canvas.winfo_toplevel().winfo_geometry().split("+")[1:])
-            #print(e.x,e.y)
             position: Tuple[int] = (e.x,e.y)
             face: Face
             for face in self.variables["detected_faces"]:
                 if face.known:
                     continue
-                print(face.location[3],face.location[2],face.location[0],face.location[2])
-                print(e.x,e.y)
                 if position[0] > face.location[3]*3 and \
                     position[0] < face.location[1]*3 and \
                     position[1] > face.location[0]*3 and \
                     position[1] < face.location[2]*3:
-                    dialog = CategorizeFace(self.root,
-                    #    self.livestream_last_frame["matrix"][face.location[1]:face.location[3],face.location[0]:face.location[2]]
-                    )
+                    dialog = CategorizeFace(self.root)
                     if dialog.returned:
                         newperson = Person(face,known=True,name=dialog.values["name"],description="")
-                        print()
                         self.recognition.add_person(newperson,"hostile" if dialog.values["hostile"] else "nonhostile")
                         self.recognition.save_faces()
-                        #print("hostile" if dialog.values["hostile"] else "non-hostile")
         def updatepersonslist():
             lists:List[tk.Widget] = [
                 getWidgetByName("personslist.library.hostilepersons",self.root),
@@ -208,8 +192,9 @@ class GUI:
                     infocontainer.pack(side="left")
                     datecontainer = tk.Frame(infocontainer,name="datecontainer")
                     datecontainer.grid(row=1,column=0,sticky="w")
-                    canvas = tk.Canvas(imgcontainer,width=75,height=75)
-                    canvas.pack(side="left")
+                    person.getimage()
+                    image = tk.Label(imgcontainer,image = person.cover_picture["image"])
+                    image.pack(side="left")
                     
                     datedetected: str = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(person.date_last_seen))
                     dateentered: str = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(person.date_entered))
@@ -221,8 +206,6 @@ class GUI:
         def delete_faces():
             self.recognition.clear_faces()
             self.recognition.save_faces()
-        def update_recently_detected():
-            pass
         identifyfacebutton: tk.Button = getWidgetByName("stream.controls.identifyface",self.root)
         identifyfacebutton.configure(command = toggleidentifyface)
         livestreamcanvas: tk.Canvas = getWidgetByName("stream.livestream",self.root)
@@ -230,8 +213,6 @@ class GUI:
         clearfacesbutton:tk.Button = getWidgetByName("settings.buttoncontrols.deletefaces",self.root)
         clearfacesbutton.configure(command = delete_faces)
         self.bind_switchscreen_event("personslist",updatepersonslist)
-        self.bind_switchscreen_event("mainpage",update_recently_detected)
-
     def bind_switchscreen_event(self,screen,binded):
         if screen not in self.switchscreen_eventbindings:
             self.switchscreen_eventbindings[screen] = [binded]
@@ -242,7 +223,6 @@ class GUI:
         root = ET.parse(path).getroot()
         for variable in root:
             self.configuration[variable.attrib["name"]].set(eval(variable.attrib["value"]))
-            #print( eval(variable.attrib["value"]))
             for value in variable:
                 widget = getWidgetByName(value.text,self.root)
                 widget.configure(variable = self.configuration[variable.attrib["name"]])
@@ -281,7 +261,7 @@ def notify_user_stranger(n):
 
 if __name__ == "__main__":
 
-    from stoppablethread import Thread
+    from utilities import Thread
     import atexit
 
     gui = GUI(["mainpage","stream","personslist","settings","templates"],title="Security System",names={
@@ -324,7 +304,10 @@ if __name__ == "__main__":
             image = cv2.imread("../train/placeholder.png")
             if yes:
                 faces = gui.recognition.detect_faces(image)
-                labels,hostility = gui.recognition.label_persons(faces)
+                if gui.current_screen == "stream":
+                    labels,hostility,stranger = gui.recognition.label_persons(faces,image)
+                else:
+                    labels,hostility,stranger = gui.recognition.label_persons(faces)
                 gui.update_stream(image,labels)
             else:
                 gui.update_stream(image)
